@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.List;
 
 @SpringBootApplication
@@ -23,14 +24,16 @@ public class Main {
         SpringApplication.run(Main.class, args);
     }
     @GetMapping
-    public List<Customer> getCustomers() {
-        return customerRepository.findAll();
+    public ResponseEntity<List<Customer>> getCustomers() {
+        List<Customer> customers = customerRepository.findAll();
+
+        return new ResponseEntity<>(customers, HttpStatus.OK);
     }
 
     record NewCustomerRequest(String name, String email, Integer age) {}
 
     @PostMapping
-    public void addCustomer(@RequestBody NewCustomerRequest req) {
+    public ResponseEntity<Void> addCustomer(@RequestBody NewCustomerRequest req) {
         Customer customer = new Customer();
 
         customer.setName(req.name());
@@ -38,11 +41,16 @@ public class Main {
         customer.setAge(req.age());
 
         customerRepository.save(customer);
+        return ResponseEntity.created(URI.create("/customers/" + customer.getId())).build();
     }
 
     @DeleteMapping("{customerId}")
-    public void deleteCustomer(@PathVariable("customerId") Integer id) {
+    public ResponseEntity<Void> deleteCustomer(@PathVariable("customerId") Integer id) {
+        if (!customerRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
         customerRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("{customerId}")
